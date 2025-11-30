@@ -1,26 +1,35 @@
-const express = require('express')
-const app = express()
-const cors = require('cors')
-require('dotenv').config()
-app.use(cors())
-app.use(express.json())
+// server.js
+const express = require('express');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+require('dotenv').config();
 
-//Application Port
-const port = process.env.PORT
+const runMigrations = require('./model/migrate');
+const { testConnection } = require('./config/db');
 
-//Database Configuration
-const {testConnection} = require('./Config/db')
+const authRoutes = require('./routes/Authentication/auth');
+const sessionRoutes = require('./routes/Session/SessionRoute');
+const messageRoutes = require('./routes/Message/MessageRoute');
 
+const errorHandler = require('./Middleware/errorHandler');
 
-//Authentication Configurations
-const registerUser = require('./Routes/Authentication/SignupRoutes')
-const logIn = require('./Routes/Authentication/LoginRoute')
+const app = express();
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors());
 
-app.use('/signup',registerUser)
-app.use('/login',logIn)
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/messages', messageRoutes);
 
+// Start server after migrations finish
+(async () => {
+  await runMigrations();
+  await testConnection();
+  // Put error handler last
+  app.use(errorHandler);
 
-app.listen(port,()=>{
-    testConnection()
-    console.log(`Application is running on http://localhost:${port}`)
-})
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => console.log(`Server running on http://localhost:${port}`));
+})();
