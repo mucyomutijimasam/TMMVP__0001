@@ -1,10 +1,19 @@
-// middleware/validate.js
-module.exports = (schema, target = 'body') => (req, res, next) => {
-  const data = target === 'params' ? req.params : req[target];
-  const { error } = schema.validate(data, { abortEarly: false });
-  if (error) {
-    const messages = error.details.map(d => d.message);
-    return res.status(400).json({ ok: false, errors: messages });
-  }
-  return next();
+module.exports = (schema, property = 'body') => {
+  return (req, res, next) => {
+    const data =
+      property === 'params' ? req.params :
+      property === 'query' ? req.query :
+      req.body;
+
+    const { error } = schema.validate(data, { abortEarly: true });
+
+    if (error) {
+      return res.status(400).json({
+        ok: false,
+        error: error.details[0].message
+      });
+    }
+
+    next();
+  };
 };
