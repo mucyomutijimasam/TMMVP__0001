@@ -9,6 +9,8 @@ const { testConnection } = require('./config/db');
 
 const authRoutes = require('./routes/Authentication/auth');
 const sessionRoutes = require('./routes/Session/SessionRoute');
+const adminRoutes = require('./routes/Admin/adminRoutes');
+
 // const messageRoutes = require('./routes/Message/MessageRoute');
 
 const errorHandler = require('./Middleware/errorHandler');
@@ -21,6 +23,8 @@ app.use(cors());
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/admin', adminRoutes);
+
 // app.use('/api/messages', messageRoutes);
 
 // Start server after migrations finish

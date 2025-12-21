@@ -4,14 +4,19 @@ require('dotenv').config();
 
 async function runMigrations() {
   const force = process.env.FORCE_RESET === 'true';
+
   try {
     if (force) {
       console.warn('⚠️ FORCE_RESET=true -> Dropping tables (destructive).');
+      
       await pool.execute('DROP TABLE IF EXISTS messages');
       await pool.execute('DROP TABLE IF EXISTS sessions');
+      await pool.execute('DROP TABLE IF EXISTS refresh_tokens');
       await pool.execute('DROP TABLE IF EXISTS users');
-      console.log('Dropped existing tables.');
+      
+      console.log('🗑️ Dropped existing tables.');
     }
+
 
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS users (
@@ -22,6 +27,7 @@ async function runMigrations() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
 
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS sessions (
@@ -39,6 +45,7 @@ async function runMigrations() {
       )
     `);
 
+    // 3. Messages Table (Child of Sessions and Users)
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS messages (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -53,6 +60,20 @@ async function runMigrations() {
         INDEX (session_id),
         INDEX (user_id),
         INDEX (created_at)
+      )
+    `);
+
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        token VARCHAR(500) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        revoked BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_refresh_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX (token),
+        INDEX (user_id)
       )
     `);
 
