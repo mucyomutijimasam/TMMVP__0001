@@ -1,5 +1,5 @@
 const User = require('../../model/user');
-const pool = require('../../config/db'); // Direct pool access for refresh_token table
+const {pool} = require('../../config/db'); // Direct pool access for refresh_token table
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { 
@@ -14,13 +14,15 @@ require('dotenv').config();
  */
 async function registerUser(req, res, next) {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, confirm } = req.body;
 
     const existing = await User.findByEmail(email);
     if (existing) {
       return res.status(409).json({ ok: false, error: 'Account already exists' });
     }
-
+    if(password !== confirm){
+      return res.status(400).json({ok:false, error:'Password must match'})
+    }
     const hash = await bcrypt.hash(password, 10);
     const created = await User.createUser(username, email, hash);
     
@@ -64,7 +66,7 @@ async function logIn(req, res, next) {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 

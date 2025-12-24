@@ -11,7 +11,6 @@ router.post('/', validate(loginSchema), logIn);
 // No validation schema needed usually as it reads from cookies
 router.post('/refresh', refresh);
 
-// POST /api/auth/login/logout
-router.post('/logout', logout);
+
 
 module.exports = router;

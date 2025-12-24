@@ -18,7 +18,10 @@ const errorHandler = require('./Middleware/errorHandler');
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -34,6 +37,6 @@ app.use('/api/admin', adminRoutes);
   // Put error handler last
   app.use(errorHandler);
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 15150;
   app.listen(port, () => console.log(`Server running on http://localhost:${port}`));
 })();
