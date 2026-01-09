@@ -1,69 +1,67 @@
 // controllers/messageController.js
+
 const Message = require('../../model/Messages');
 const Session = require('../../model/Sessions');
+const { handleNewMessage } = require('../../services/assistant/orchestrator');
+
 
 async function sendMessage(req, res, next) {
   try {
     const userId = req.user.id;
-    // Get sessionId from URL path (if using /:sessionId/messages) or it will be undefined/null
-    let sessionId = req.params.sessionId
-      ? parseInt(req.params.sessionId, 10)
-      : null;
+    let sessionId = req.params.sessionId ? parseInt(req.params.sessionId, 10) : null;
+    const { content, emotion_detected = null } = req.body;
 
-    const { sender = 'user', content, emotion_detected = null } = req.body;
+    // 1. SESSION LOGIC: Ensure a session exists and belongs to the user
     let session;
-    
-    // --- 1️⃣ Handle Explicit Session ID (User is posting to a specific session) ---
     if (sessionId) {
       session = await Session.findById(sessionId);
-      
-      if (!session) {
-        return res.status(404).json({ ok: false, error: 'Session not found' });
-      }
-      // Ownership check
-      if (session.user_id !== userId) {
-        return res.status(403).json({ ok: false, error: 'Access denied' });
-      }
-      // Optional: Check if session is ended (depends on desired behavior)
-      // if (session.end_time) {
-      //   return res.status(400).json({ ok: false, error: 'Session is already ended' });
-      // }
-    } 
-    
-    // --- 2️⃣ Handle Automatic Session Logic (sessionId is NULL/undefined) ---
-    else {
-      // Backend checks: Does the user have an active session?
+      if (!session) return res.status(404).json({ ok: false, error: 'Session not found' });
+      if (session.user_id !== userId) return res.status(403).json({ ok: false, error: 'Access denied' });
+    } else {
+      // Find active or create new if sessionId wasn't provided
       session = await Session.findActiveByUser(userId); 
-
-      if (session) {
-        // If YES: Use that session
-        sessionId = session.id;
+      if (!session) {
+        const createdSession = await Session.create(userId);
+        sessionId = createdSession.insertId;
+        session = await Session.findById(sessionId); // Get full session object
       } else {
-        // If NO: Create a new session
-        const created = await Session.create(userId);
-        sessionId = created.insertId;
+        sessionId = session.id;
       }
     }
 
-    // --- 3️⃣ Create and Store Message ---
+    // 2. PERSIST USER MESSAGE: Save the user's input first
     const createdMessage = await Message.create({
       session_id: sessionId,
       user_id: userId,
-      sender,
+      sender: 'user',
       content,
-      emotion_detected: emotion_detected
-        ? JSON.stringify(emotion_detected)
-        : null
+      emotion_detected: emotion_detected ? JSON.stringify(emotion_detected) : null
     });
 
-    // Return messageId and the (potentially new) sessionId
+    // 3. TRIGGER SPECIALIZED ASSISTANT: 
+    // We fetch the message history to give the assistant context
+    const messageHistory = await Message.findBySession(sessionId);
+    
+    // The Orchestrator handles Safety -> Context -> Engine -> Saving AI response
+    const assistantResult = await handleNewMessage({
+      session,
+      messages: messageHistory,
+      newMessage: { content }
+    });
+
+    // 4. RESPONSE: Return to frontend
     return res.status(201).json({
       ok: true,
       data: {
         messageId: createdMessage.insertId,
-        sessionId // IMPORTANT for frontend state update
+        sessionId,
+        // Optional: you could return assistantResult.text here 
+        // if you aren't using a separate fetch call on the frontend.
+        assistantReply: assistantResult ? assistantResult.text : null,
+        safetyTriggered: assistantResult === null // If safety.js blocked it
       }
     });
+
   } catch (err) {
     return next(err);
   }

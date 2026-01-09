@@ -10,6 +10,7 @@ const { testConnection } = require('./config/db');
 const authRoutes = require('./routes/Authentication/auth');
 const sessionRoutes = require('./routes/Session/SessionRoute');
 const adminRoutes = require('./routes/Admin/adminRoutes');
+const assistantRoutes = require('./routes/Assistant/assistantRoutes');
 
 // const messageRoutes = require('./routes/Message/MessageRoute');
 
@@ -27,6 +28,7 @@ app.use(cors({
 app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/assistant', assistantRoutes);
 
 // app.use('/api/messages', messageRoutes);
 
