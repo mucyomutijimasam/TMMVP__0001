@@ -9,6 +9,9 @@ const messageSchema = require('../../Validation/messageCreate.Schema');
 const { sendMessage } = require('../../Controllers/Message/MessageController');
 const messageRoutes = require('../Message/MessageRoute');
 
+const { getSessionAnalysis } = require('../../Controllers/Analysis/SessionAnalysisController');
+
+
 const {
   createSession,
   getSessions,
@@ -38,5 +41,9 @@ router.post('/:sessionId/messages', validate(messageSchema), sendMessage);
 
 // --- MESSAGE READ / UPDATE / DELETE ---
 router.use(messageRoutes);
+
+// GET /api/sessions/:sessionId/analysis
+router.get('/:sessionId/analysis', getSessionAnalysis);
+
 
 module.exports = router;

@@ -43,6 +43,7 @@ class Session {
     return { affectedRows: result.affectedRows };
   }
 
+  // --- FIXED END METHOD ---
   static async end(id, userId) {
     const [result] = await pool.execute(
       `UPDATE sessions
@@ -60,17 +61,17 @@ class Session {
     );
     return { affectedRows: result.affectedRows };
   }
-  static async findActiveByUser(userId) {
-  const [rows] = await pool.execute(
-    `SELECT * FROM sessions 
-     WHERE user_id = ? AND end_time IS NULL 
-     ORDER BY start_time DESC 
-     LIMIT 1`,
-    [userId]
-  );
-  return rows[0] || null;
-}
 
+  static async findActiveByUser(userId) {
+    const [rows] = await pool.execute(
+      `SELECT * FROM sessions 
+       WHERE user_id = ? AND end_time IS NULL 
+       ORDER BY start_time DESC 
+       LIMIT 1`,
+      [userId]
+    );
+    return rows[0] || null;
+  }
 }
 
 module.exports = Session;

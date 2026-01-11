@@ -1,5 +1,7 @@
 // controllers/sessionController.js
 const Session = require('../../model/Sessions');
+const {generateSessionAnalysis} = require('../../services/analysis/sessionAnalysis')
+const { enqueueAnalysis } = require('../../services/analysis/analysisQueue');
 
 async function createSession(req, res, next) {
   try {
@@ -67,17 +69,32 @@ async function updateSession(req, res, next) {
   }
 }
 
+
 async function endSession(req, res, next) {
   try {
     const userId = req.user.id;
-    const sessionId = Number(req.params.sessionId);
+    const sessionId = parseInt(req.params.sessionId, 10);
 
-    const ended = await Session.end(sessionId, userId);
-    if (ended.affectedRows === 0) {
-      return res.status(400).json({ ok: false, error: 'Session already ended or not found' });
+    if (Number.isNaN(sessionId)) {
+      return res.status(400).json({ ok: false, error: 'Invalid session ID' });
     }
 
-    return res.json({ ok: true });
+    const session = await Session.findById(sessionId);
+    if (!session || session.user_id !== userId) {
+      return res.status(404).json({ ok: false, error: 'Session not found' });
+    }
+
+    if (session.ended_at) {
+      return res.status(400).json({ ok: false, error: 'Session already ended' });
+    }
+
+    // 1. End session
+    await enqueueAnalysis(sessionId, userId);
+
+    // 2. Trigger analysis (sync for now)
+    await generateSessionAnalysis(sessionId, userId);
+
+    return res.json({ ok: true, message: 'Session ended and analyzed' });
   } catch (err) {
     return next(err);
   }

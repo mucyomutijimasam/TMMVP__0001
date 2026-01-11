@@ -11,6 +11,8 @@ const authRoutes = require('./routes/Authentication/auth');
 const sessionRoutes = require('./routes/Session/SessionRoute');
 const adminRoutes = require('./routes/Admin/adminRoutes');
 const assistantRoutes = require('./routes/Assistant/assistantRoutes');
+const {runAnalysisWorker} = require('./worker/analysisWorker')
+
 
 // const messageRoutes = require('./routes/Message/MessageRoute');
 
@@ -36,6 +38,7 @@ app.use('/api/assistant', assistantRoutes);
 (async () => {
   await runMigrations();
   await testConnection();
+  await setInterval(runAnalysisWorker, 5000);
   // Put error handler last
   app.use(errorHandler);
 
